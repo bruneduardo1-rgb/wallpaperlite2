@@ -1,0 +1,35 @@
+name: Gerar WallpaperLite.exe
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Extrair o projeto do zip
+        run: Expand-Archive -Path WallpaperLite.zip -DestinationPath src -Force
+
+      - name: Gerar versao completa
+        run: dotnet publish src/WallpaperLite/WallpaperLite.csproj -c Release --self-contained true -p:EnableCompressionInSingleFile=true -o publish/completo
+
+      - name: Gerar versao pequena
+        run: dotnet publish src/WallpaperLite/WallpaperLite.csproj -c Release --self-contained false -o publish/pequeno
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WallpaperLite-completo
+          path: publish/completo
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WallpaperLite-pequeno
+          path: publish/pequeno
