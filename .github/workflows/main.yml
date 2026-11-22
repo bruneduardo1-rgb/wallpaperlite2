@@ -1,35 +1,38 @@
 name: Gerar WallpaperLite.exe
-
+ 
 on:
   push:
     branches: [main]
   workflow_dispatch:
-
+ 
+permissions:
+  contents: write
+ 
 jobs:
   build:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-
+ 
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
-
+ 
       - name: Extrair o projeto do zip
         run: Expand-Archive -Path WallpaperLite.zip -DestinationPath src -Force
-
+ 
       - name: Gerar versao completa
-        run: dotnet publish src/WallpaperLite/WallpaperLite.csproj -c Release --self-contained true -p:EnableCompressionInSingleFile=true -o publish/completo
-
+        run: dotnet publish src/WallpaperLite/WallpaperLite.csproj -c Release --self-contained true -p:EnableCompressionInSingleFile=true -p:Version=1.0.${{ github.run_number }} -o publish/completo
+ 
       - name: Gerar versao pequena
-        run: dotnet publish src/WallpaperLite/WallpaperLite.csproj -c Release --self-contained false -o publish/pequeno
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: WallpaperLite-completo
-          path: publish/completo
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: WallpaperLite-pequeno
-          path: publish/pequeno
+        run: dotnet publish src/WallpaperLite/WallpaperLite.csproj -c Release --self-contained false -p:Version=1.0.${{ github.run_number }} -o publish/pequeno
+ 
+      - name: Publicar release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          New-Item -ItemType Directory -Force release | Out-Null
+          Copy-Item publish/completo/WallpaperLite.exe release/WallpaperLite-completo.exe
+          Copy-Item publish/pequeno/WallpaperLite.exe release/WallpaperLite-pequeno.exe
+          gh release create "v1.0.${{ github.run_number }}" release/WallpaperLite-completo.exe release/WallpaperLite-pequeno.exe --repo ${{ github.repository }} --title "WallpaperLite 1.0.${{ github.run_number }}" --notes "Build automatico" --latest
+ 
